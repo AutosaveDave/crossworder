@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "rules": [
+      { "rules": "firestore.rules", "database": "crossword" }
+    ],
+    "indexes": "firestore.indexes.json"
+  }
+}

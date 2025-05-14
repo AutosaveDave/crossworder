@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only authenticated users can read/write their own user data, but cannot change their own admin status
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId && !("admin" in request.resource.data) && !("admin" in request.resource.data.diff(resource.data));
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    // Anyone authenticated can read word sets, but only admins can write
+    match /wordSets/{setId} {
+      allow read: if request.auth != null;
+      allow write, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
+    }
+    // All logged in users can read all fullPuzzles; only admins can write/update/delete
+    match /fullPuzzles/{docId} {
+      allow read: if request.auth != null;
+      allow write, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
+    }
+  }
+}
+
