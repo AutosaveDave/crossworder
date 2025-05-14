@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://YOUR_GITHUB_USERNAME.github.io/crossworder",
+  "homepage": "https://AutosaveDave.github.io/crossworder",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
