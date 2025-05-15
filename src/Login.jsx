@@ -13,7 +13,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/crossworder/');
     }
   }, [user, navigate]);
 

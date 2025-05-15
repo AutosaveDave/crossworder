@@ -1,14 +1,13 @@
 // src/PuzzleView.jsx
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from './useAuth';
-import { fetchUserPuzzles, updateUserPuzzle } from './firestore';
+import { fetchUserPuzzles } from './firestore';
 import Crossword from '@jaredreisinger/react-crossword';
 
 export default function PuzzleView() {
   const { user } = useAuth();
   const { puzzleId } = useParams();
-  const navigate = useNavigate();
   const [puzzle, setPuzzle] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,10 +38,26 @@ export default function PuzzleView() {
   });
 
   // Only show puzzle and clues, nothing else
+  // Responsive, newspaper-style layout: puzzle and clues side by side on iPad, stacked on mobile
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
-      <h2>Puzzle: {puzzle.size}x{puzzle.size}</h2>
-      <Crossword data={crosswordData} />
+    <div className="crossword-area fade-in">
+      <div className="crossword-board">
+        <Crossword data={crosswordData} />
+      </div>
+      <div className="clues-area">
+        <h3>Across</h3>
+        <ul className="clues-list">
+          {Object.entries(crosswordData.across).map(([num, clue]) => (
+            <li key={num}><strong>{num}.</strong> {clue.clue}</li>
+          ))}
+        </ul>
+        <h3>Down</h3>
+        <ul className="clues-list">
+          {Object.entries(crosswordData.down).map(([num, clue]) => (
+            <li key={num}><strong>{num}.</strong> {clue.clue}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

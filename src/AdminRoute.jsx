@@ -7,8 +7,8 @@ export default function AdminRoute({ children }) {
   // If user is not loaded yet, show nothing (or a loading spinner)
   if (user === null) return null;
   // If not logged in, redirect to login
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/crossworder/login" replace />;
   // If not admin, redirect to dashboard
-  if (!user.admin) return <Navigate to="/" replace />;
+  if (!user.admin) return <Navigate to="/crossworder/" replace />;
   return children;
 }

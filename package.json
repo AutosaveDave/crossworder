@@ -13,6 +13,10 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@fontsource/fira-mono": "^5.2.6",
+    "@fontsource/fira-sans": "^5.2.5",
+    "@fontsource/merriweather": "^5.2.7",
+    "dayjs": "^1.11.13",
     "react": "^18.2.0",
     "react-crossword": "^0.2.0",
     "react-dom": "^18.2.0",
