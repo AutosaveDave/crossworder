@@ -1,24 +1,46 @@
 // src/Dashboard.jsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
-import { fetchWordSets } from './firestore';
-import { useNavigate, Routes, Route, useParams } from 'react-router-dom';
+import { useNavigate, Routes, Route } from 'react-router-dom';
 import Crossword from '@jaredreisinger/react-crossword';
-import PuzzleView from './PuzzleView';
 import PreMadePuzzlesPage from './PreMadePuzzlesPage';
-
-const PUZZLE_SIZES = [10, 15, 20, 25, 30];
+import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
+import { db } from './firebase';
+import FullPuzzleView from './FullPuzzleView';
 
 function DashboardMain() {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [userPremadeProgress, setUserPremadeProgress] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      await fetchWordSets();
+      if (user) {
+        // Fetch all premadeProgress docs for this user
+        const q = query(
+          collection(db, 'premadeProgress'),
+          where('userId', '==', user.uid)
+        );
+        const snapshot = await getDocs(q);
+        let progress = snapshot.docs.map(docSnap => ({
+          ...docSnap.data(),
+          id: docSnap.id,
+        }));
+        // Fetch titles for each fullPuzzleId
+        const titleMap = {};
+        await Promise.all(progress.map(async (p) => {
+          if (p.fullPuzzleId) {
+            const puzzleDoc = await getDoc(doc(db, 'fullPuzzles', p.fullPuzzleId));
+            titleMap[p.fullPuzzleId] = puzzleDoc.exists() ? puzzleDoc.data().title || p.fullPuzzleId : p.fullPuzzleId;
+          }
+        }));
+        // Attach title to each progress entry
+        progress = progress.map(p => ({ ...p, title: titleMap[p.fullPuzzleId] || p.fullPuzzleId }));
+        setUserPremadeProgress(progress.sort((a, b) => new Date(b.lastSaved?.toDate?.() || b.lastSaved) - new Date(a.lastSaved?.toDate?.() || a.lastSaved)));
+      }
       setLoading(false);
     }
     if (user) loadData();
@@ -42,7 +64,25 @@ function DashboardMain() {
         <h2 style={{fontSize: '2.2em', marginBottom: 0}}>
           Welcome, {user?.email}
         </h2>
-        
+        {/* Pre-made puzzle progress list */}
+        {userPremadeProgress.length > 0 && (
+          <div style={{margin: '1.5em 0'}}>
+            <h3>Your Pre-made Puzzle Progress</h3>
+            <ul style={{listStyle: 'none', padding: 0}}>
+              {userPremadeProgress.map(p => (
+                <li key={p.fullPuzzleId} style={{marginBottom: 10, display: 'flex', alignItems: 'center'}}>
+                  <span style={{fontWeight: 600, flex: 2}}>{p.title || p.fullPuzzleId}</span>
+                  <span style={{marginLeft: 12, color: '#645e4f', fontSize: '0.95em', flex: 1}}>
+                    {p.lastSaved ? (p.lastSaved.toDate ? p.lastSaved.toDate().toLocaleString() : new Date(p.lastSaved).toLocaleString()) : ''}
+                  </span>
+                  <button style={{marginLeft: 12}} onClick={() => navigate(`/crossworder/fullpuzzle/${p.fullPuzzleId}`)}>
+                    Continue
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div>
           <button onClick={() => navigate('/crossworder/premade')}>Load Pre-made Crossword Puzzle</button>
         </div>
@@ -68,25 +108,5 @@ export default function DashboardWrapper() {
       <Route path="/premade" element={<PreMadePuzzlesPage />} />
       <Route path="/fullpuzzle/:puzzleId" element={<FullPuzzleView />} />
     </Routes>
-  );
-}
-
-function FullPuzzleView() {
-  const { puzzleId } = useParams();
-  let puzzle = null;
-  try {
-    puzzle = JSON.parse(sessionStorage.getItem('selectedFullPuzzle'));
-  } catch {
-    puzzle = null;
-  }
-  if (!puzzle || puzzle.id !== puzzleId) {
-    return <div>Puzzle not found or not loaded from dashboard.</div>;
-  }
-  const crosswordData = puzzle.data || puzzle;
-  return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
-      <h2>{puzzle.title || 'Pre-made Puzzle'}</h2>
-      <Crossword data={crosswordData} />
-    </div>
   );
 }

@@ -5,8 +5,17 @@ service cloud.firestore {
     // Only authenticated users can read/write their own user data, but cannot change their own admin status
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId && !("admin" in request.resource.data) && !("admin" in request.resource.data.diff(resource.data));
+      allow create: if request.auth != null && request.auth.uid == userId && !("admin" in request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == userId && !("admin" in request.resource.data.diff(resource.data));
+      // Special rule for updating only premadeProgress field
+      allow update: if request.auth != null && request.auth.uid == userId && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['premadeProgress']);
       allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    // Each user can only read/write/update/delete their own premadeProgress documents
+    match /premadeProgress/{progressId} {
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
     // Anyone authenticated can read word sets, but only admins can write
     match /wordSets/{setId} {
@@ -20,4 +29,3 @@ service cloud.firestore {
     }
   }
 }
-

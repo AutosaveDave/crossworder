@@ -1,15 +1,17 @@
 // src/PreMadePuzzlesPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, where, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import Crossword from '@jaredreisinger/react-crossword';
 import dayjs from 'dayjs';
+import { useAuth } from './useAuth';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function PreMadePuzzlesPage() {
   const [fullPuzzles, setFullPuzzles] = useState([]);
   const [loadingFullPuzzles, setLoadingFullPuzzles] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Search/filter state
   const [titleFilter, setTitleFilter] = useState('');
@@ -17,7 +19,7 @@ export default function PreMadePuzzlesPage() {
   const [decadeFilter, setDecadeFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-   const [weekdayFilter, setWeekdayFilter] = useState('');
+  const [weekdayFilter, setWeekdayFilter] = useState('');
 
   useEffect(() => {
     async function fetchFullPuzzles() {
@@ -33,7 +35,37 @@ export default function PreMadePuzzlesPage() {
     fetchFullPuzzles();
   }, []);
 
+  async function savePremadeProgress(puzzle) {
+    if (!user) return;
+    try {
+      // Check if progress already exists for this user/puzzle
+      const q = query(
+        collection(db, 'premadeProgress'),
+        where('userId', '==', user.uid),
+        where('fullPuzzleId', '==', puzzle.id)
+      );
+      const snapshot = await getDocs(q);
+      let docId;
+      if (!snapshot.empty) {
+        docId = snapshot.docs[0].id;
+      } else {
+        docId = uuidv4();
+      }
+      const gridData = [];
+      await setDoc(doc(db, 'premadeProgress', docId), {
+        userId: user.uid,
+        fullPuzzleId: puzzle.id,
+        gridData,
+        lastSaved: Timestamp.now(),
+      });
+    } catch {
+      // Optionally handle error
+    }
+  }
+
   function handleLoadFullPuzzle(puzzle) {
+    // Save progress (0% if first time)
+    savePremadeProgress(puzzle, 0);
     sessionStorage.setItem('selectedFullPuzzle', JSON.stringify(puzzle));
     navigate(`/crossworder/fullpuzzle/${puzzle.id}`);
   }

@@ -27,6 +27,15 @@ export default function Login() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setError('');
+    try {
+      await login('google');
+    } catch {
+      setError('Google login failed');
+    }
+  };
+
   return (
     <div className="login-container">
       <h2>Login</h2>
@@ -46,6 +55,9 @@ export default function Login() {
           required
         />
         <button type="submit">Login</button>
+        <button type="button" onClick={handleGoogleLogin} style={{marginTop: 12, background: '#fff', color: '#222', border: '1.5px solid #4285F4'}}>
+          Sign in with Google
+        </button>
         {error && <div className="error">{error}</div>}
       </form>
     </div>

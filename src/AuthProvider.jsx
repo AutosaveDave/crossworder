@@ -1,7 +1,7 @@
 // src/AuthProvider.jsx
 import React, { createContext, useEffect, useState } from 'react';
 import { auth } from './firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -38,7 +38,13 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
+  const login = (email, password) => {
+    if (email === 'google') {
+      const provider = new GoogleAuthProvider();
+      return signInWithPopup(auth, provider);
+    }
+    return signInWithEmailAndPassword(auth, email, password);
+  };
   const logout = () => signOut(auth);
   const changePassword = (newPassword) => updatePassword(auth.currentUser, newPassword);
 
