@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getWordSets, addWordSet, updateWordSet, deleteWordSet, addWordToSet, updateWordInSet, deleteWordFromSet } from './firestore';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
 
 export default function Admin() {
@@ -11,7 +11,9 @@ export default function Admin() {
   const [newSetWeight, setNewSetWeight] = useState(1);
   const [fullPuzzles, setFullPuzzles] = useState([]);
   const [loadingFullPuzzles, setLoadingFullPuzzles] = useState(false);
-
+  const [toggleSwitch1, setToggleSwitch1] = useState(false);
+  const [toggleSwitch2, setToggleSwitch2] = useState(false);
+  const [deletingPuzzles, setDeletingPuzzles] = useState(false);
   useEffect(() => {
     async function fetchSets() {
       setLoading(true);
@@ -30,7 +32,8 @@ export default function Admin() {
       setLoadingFullPuzzles(true);
       try {
         const snapshot = await getDocs(collection(db, 'fullPuzzles'));
-        setFullPuzzles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const puzzles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setFullPuzzles(puzzles);
       } catch (e) {
         setError('Failed to load full puzzles');
       }
@@ -258,8 +261,7 @@ export default function Admin() {
           </div>
         </div>
       ))}
-      <hr />
-      <div>
+      <hr />      <div>
         <h3>Upload Full Crossword Puzzles (JSON)</h3>
         <input
           type="file"
@@ -267,6 +269,123 @@ export default function Admin() {
           multiple
           onChange={handleUploadPuzzles}
         />
+      </div>      <hr />
+      <div style={{ marginTop: '2em', border: '1px solid #f44336', padding: '1em', borderRadius: '4px', backgroundColor: '#fff8f8' }}>        <h3 style={{ color: '#d32f2f' }}>Danger Zone: Delete All Premade Puzzles</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ margin: '0.5em 0' }}>This will permanently delete <strong>all {fullPuzzles.length} premade puzzles</strong> from the database. This action cannot be undone.</p>
+          <button 
+            onClick={async () => {
+              try {
+                setLoadingFullPuzzles(true);
+                const snapshot = await getDocs(collection(db, 'fullPuzzles'));
+                const puzzles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setFullPuzzles(puzzles);
+                setError('');
+              } catch (error) {
+                console.error('Error refreshing puzzle data:', error);
+                setError('Failed to refresh puzzle data: ' + error.message);
+              } finally {
+                setLoadingFullPuzzles(false);
+              }
+            }}
+            style={{ 
+              padding: '0.3em 0.8em', 
+              backgroundColor: '#4c7daf', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px',
+              fontSize: '0.9em'
+            }}
+            disabled={loadingFullPuzzles}
+          >
+            {loadingFullPuzzles ? 'Refreshing...' : 'Refresh Count'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1em' }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginRight: '2em' }}>
+            <input
+              type="checkbox"
+              checked={toggleSwitch1}
+              onChange={() => setToggleSwitch1(!toggleSwitch1)}
+              style={{ marginRight: '0.5em', width: '18px', height: '18px' }}
+            />
+            I understand this will delete all puzzles
+          </label>
+          
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={toggleSwitch2}
+              onChange={() => setToggleSwitch2(!toggleSwitch2)}
+              style={{ marginRight: '0.5em', width: '18px', height: '18px' }}
+            />
+            I confirm this is what I want to do
+          </label>
+        </div>
+          <button 
+          onClick={async () => {
+            if (toggleSwitch1 && toggleSwitch2) {
+              // First refresh the puzzle count to make sure we have the latest data
+              try {
+                setLoadingFullPuzzles(true);
+                const snapshot = await getDocs(collection(db, 'fullPuzzles'));
+                const puzzles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setFullPuzzles(puzzles);
+                setLoadingFullPuzzles(false);
+              } catch (error) {
+                console.error('Error refreshing puzzle data:', error);
+                setError('Failed to refresh puzzle data: ' + error.message);
+                setLoadingFullPuzzles(false);
+                return;
+              }
+
+              if (window.confirm(`WARNING: This will permanently delete ALL ${fullPuzzles.length} premade puzzles. Are you absolutely sure?`)) {
+                try {
+                  setDeletingPuzzles(true);
+                  const snapshot = await getDocs(collection(db, 'fullPuzzles'));
+                  for (const docSnapshot of snapshot.docs) {
+                    await deleteDoc(doc(db, 'fullPuzzles', docSnapshot.id));
+                  }
+                  setFullPuzzles([]);
+                  alert('All premade puzzles have been deleted successfully.');
+                } catch (error) {
+                  console.error('Error deleting puzzles:', error);
+                  setError(`Failed to delete puzzles: ${error.message}`);
+                } finally {
+                  setDeletingPuzzles(false);
+                  setToggleSwitch1(false);
+                  setToggleSwitch2(false);
+                }
+              }
+            } else {
+              alert('You must check both confirmation boxes before deleting puzzles.');
+            }
+          }}          disabled={!toggleSwitch1 || !toggleSwitch2 || deletingPuzzles}
+          style={{
+            backgroundColor: toggleSwitch1 && toggleSwitch2 ? '#d32f2f' : '#aaa',
+            color: 'white',
+            padding: '0.5em 1em',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: toggleSwitch1 && toggleSwitch2 ? 'pointer' : 'not-allowed'
+          }}
+        >
+          {deletingPuzzles ? 'Deleting...' : 'Delete All Premade Puzzles'}
+        </button>
+        {deletingPuzzles && <div style={{ marginTop: '1em', color: '#d32f2f' }}>Deleting all puzzles, please wait...</div>}
+        
+        {fullPuzzles.length > 0 && (
+          <div style={{ marginTop: '1em', maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', padding: '0.5em', borderRadius: '4px' }}>
+            <h4 style={{ margin: '0 0 0.5em 0' }}>Current Puzzles ({fullPuzzles.length}):</h4>
+            <ul style={{ margin: 0, paddingLeft: '1.5em' }}>
+              {fullPuzzles.map(puzzle => (
+                <li key={puzzle.id} style={{ fontSize: '0.9em', margin: '0.2em 0' }}>
+                  {puzzle.title || 'Untitled'} {puzzle.date && `(${new Date(puzzle.date).toLocaleDateString()})`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -6,13 +6,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } fro
 import { db } from './firebase';
 import { v4 as uuidv4 } from 'uuid';
 
-const crosswordTheme = {
-      gridBackground: '#222222',
-      cellBackground: '#f6f6f6',
-      cellBorder: '#121212',
-      textColor: '#000000',
-      numberColor: '#121212',
-    }
+
 
 function FullPuzzleView() {
   const { puzzleId } = useParams();
@@ -26,6 +20,15 @@ function FullPuzzleView() {
   const [saveCount, setSaveCount] = useState(0);
   const [gridState, setGridState] = useState([]); // Store current grid state
   
+    const crosswordTheme = {
+      gridBackground: '#222222',
+      cellBackground: '#f6f6f6',
+      cellBorder: '#121212',
+      textColor: '#000000',
+      numberColor: '#121212',
+      columnBreakpoint: '768px'
+    }
+
   // Create a ref for the Crossword component
   const crosswordRef = React.useRef(null);
 
@@ -97,9 +100,8 @@ function FullPuzzleView() {
       
       return () => clearTimeout(timer);
     }
-  }, [loading, puzzle, gridState]);
-  // Function to save progress to Firestore
-  const saveProgress = useCallback(async () => {
+  }, [loading, puzzle, gridState]);  // Function to save progress to Firestore
+  const saveProgress = useCallback(async (cellsToSave) => {
     if (!user || !puzzleId || !puzzle) {
       return;
     }
@@ -108,8 +110,9 @@ function FullPuzzleView() {
       setSaving(true);
       setSaveError(null);
       
-      // Collect all filled cells from current crossword state
-      const filledCells = gridState;
+      // Use the passed state if provided, otherwise use the current state
+      // This ensures we always use the most up-to-date state
+      const filledCells = cellsToSave || gridState;
       
       // Determine if we need to update an existing doc or create a new one
       let docId = progressDocId;
@@ -137,9 +140,9 @@ function FullPuzzleView() {
       setSaving(false);
     }
   }, [user, puzzleId, puzzle, gridState, progressDocId]);
-    // Cell change handler - update our gridState
+  // Cell change handler - update our gridState
   const handleCellChange = (row, col, value) => {
-    // Update our local state of the grid
+    // Update our local state of the grid and capture the updated state
     setGridState(prevState => {
       // Remove any existing entry for this cell
       const newState = prevState.filter(cell => !(cell.row === row && cell.col === col));
@@ -149,18 +152,19 @@ function FullPuzzleView() {
         newState.push({ row, col, letter: value });
       }
       
+      // Save after a short delay using the new state
+      // This ensures we're saving the state that includes this new letter
+      clearTimeout(window.savePuzzleTimeout);
+      window.savePuzzleTimeout = setTimeout(() => {
+        try {
+          saveProgress(newState); // Pass the updated state to saveProgress
+        } catch (err) {
+          console.error('Error in delayed save:', err);
+        }
+      }, 500);
+      
       return newState;
     });
-    
-    // Save after a short delay - use a ref to track the most recent timeout
-    clearTimeout(window.savePuzzleTimeout);
-    window.savePuzzleTimeout = setTimeout(() => {
-      try {
-        saveProgress();
-      } catch (err) {
-        console.error('Error in delayed save:', err);
-      }
-    }, 500);
   };
     // Restore saved progress when the crossword is ready
   const handleCrosswordReady = useCallback(() => {
@@ -199,12 +203,15 @@ function FullPuzzleView() {
   const crosswordData = puzzle.data || puzzle;
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>      <h2>{puzzle.title || 'Pre-made Puzzle'}</h2>
+    <div>
+    <h2 style={{ padding:'2px', margin:'0px', textAlign:'center'}}>{puzzle.title || 'Pre-made Puzzle'}</h2>
+    <div style={{ display: 'flex', width: '100%', margin: '0 auto', padding: '2px' }}>      
       <ThemeProvider theme={crosswordTheme}>
         <Crossword
             ref={crosswordRef}
             data={crosswordData}
-            onCellChange={handleCellChange}            onCrosswordComplete={() => {}}
+            onCellChange={handleCellChange}            
+            onCrosswordComplete={() => {}}
             onReady={handleCrosswordReady}        // Convert our gridState array to the format expected by react-crossword
             gridData={gridState.reduce((acc, cell) => {
             acc[`${cell.row}_${cell.col}`] = cell.letter;
@@ -217,7 +224,7 @@ function FullPuzzleView() {
             // We'll manage our own state with Firestore
             storageKey={null}
         />
-      </ThemeProvider>
+      </ThemeProvider>      
       {saving && <div style={{
         fontSize: '0.9em', 
         color: '#fff',
@@ -229,49 +236,7 @@ function FullPuzzleView() {
         borderRadius: '4px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
       }}>Saving progress...</div>}
-      
-      <div style={{marginTop: 10, display: 'flex', gap: '10px'}}>
-        <button 
-          onClick={() => {
-            saveProgress();
-          }}
-          style={{
-            padding: '8px 15px', 
-            backgroundColor: '#4c7daf', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px'
-          }}
-        >
-          Save Progress Now
-        </button>
-        
-        <button          onClick={() => {
-            if (gridState.length > 0 && crosswordRef.current) {
-              gridState.forEach(cell => {
-                try {
-                  if (crosswordRef.current && crosswordRef.current.setGuess) {
-                    crosswordRef.current.setGuess(cell.row, cell.col, cell.letter);
-                  }
-                } catch (err) {
-                  console.error(`Error restoring cell:`, err);
-                }
-              });
-            }
-          }}
-          style={{
-            padding: '8px 15px', 
-            backgroundColor: '#3c5c73', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px',
-            fontWeight: 'bold',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-          }}
-        >
-          Manually Restore Letters
-        </button>
-      </div>
+    </div>
     </div>
   );
 }
