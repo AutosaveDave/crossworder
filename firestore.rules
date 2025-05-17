@@ -13,9 +13,18 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
     // Each user can only read/write/update/delete their own premadeProgress documents
+    // Added constraint to ensure userId_fullPuzzleId combination is unique
     match /premadeProgress/{progressId} {
       allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && 
+                    request.resource.data.userId == request.auth.uid && 
+                    (
+                      // Either the document ID must follow our naming convention
+                      progressId == request.resource.data.userId + "_" + request.resource.data.fullPuzzleId ||
+                      // Or we need to ensure there's no existing document with the same userId and fullPuzzleId
+                      !exists(/databases/$(database)/documents/premadeProgress/$(request.resource.data.userId + "_" + request.resource.data.fullPuzzleId)) &&
+                      !existsAfter(/databases/$(database)/documents/premadeProgress/$(request.resource.data.userId + "_" + request.resource.data.fullPuzzleId))
+                    );
     }
     // Anyone authenticated can read word sets, but only admins can write
     match /wordSets/{setId} {
