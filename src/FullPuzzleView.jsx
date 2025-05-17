@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from './useAuth';
 import { Crossword, CrosswordProvider, CrosswordGrid, ThemeProvider } from '@jaredreisinger/react-crossword';
@@ -31,6 +31,41 @@ function FullPuzzleView() {
 
   // Create a ref for the Crossword component
   const crosswordRef = React.useRef(null);
+
+  // Add refs for clue lists
+  const acrossCluesRef = useRef(null);
+  const downCluesRef = useRef(null);
+  
+  // Function to scroll to an active clue
+  const scrollToClue = (direction, number) => {
+    console.log(`Attempting to scroll to ${direction}-${number}`);
+    
+    // Select the appropriate ref based on direction
+    const clueListRef = direction === 'across' ? acrossCluesRef : downCluesRef;
+    
+    if (!clueListRef.current) {
+      console.warn('Clue list ref is not available');
+      return;
+    }
+    
+    // Find the clue element inside the list
+    const clueElement = clueListRef.current.querySelector(`[data-clue="${direction}-${number}"]`);
+    
+    if (clueElement) {
+      console.log(`Found clue element for ${direction}-${number}, scrolling into view`);
+      // Scroll the element into view with smooth behavior
+      clueElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      console.warn(`Could not find clue element for ${direction}-${number}`);
+    }
+  };
+  
+  // Handle clue focus event
+  const handleClueSelected = useCallback((direction, number, _startingPosition) => {
+    console.log(`Clue selected: ${direction}-${number}`);
+    // Scroll to make the clue visible with a small delay to ensure the DOM is updated
+    setTimeout(() => scrollToClue(direction, number), 100);
+  }, []);
 
   // Fetch the puzzle data
   useEffect(() => {    async function fetchPuzzle() {
@@ -204,39 +239,94 @@ function FullPuzzleView() {
 
   return (
     <div>
-    <h2 style={{ padding:'2px', margin:'0px', textAlign:'center'}}>{puzzle.title || 'Pre-made Puzzle'}</h2>
-    <div style={{ display: 'flex', width: '100%', margin: '0 auto', padding: '2px' }}>      
-      <ThemeProvider theme={crosswordTheme}>
-        <Crossword
-            ref={crosswordRef}
-            data={crosswordData}
-            onCellChange={handleCellChange}            
-            onCrosswordComplete={() => {}}
-            onReady={handleCrosswordReady}        // Convert our gridState array to the format expected by react-crossword
-            gridData={gridState.reduce((acc, cell) => {
-            acc[`${cell.row}_${cell.col}`] = cell.letter;
-            return acc;
-            }, {})}
-            // Setting useStorage to false ensures we fully control the grid state
-            // and prevents conflicts with localStorage
-            useStorage={false}
-            // Disable this key to prevent auto-saving to localStorage
-            // We'll manage our own state with Firestore
-            storageKey={null}
-        />
-      </ThemeProvider>      
-      {saving && <div style={{
-        fontSize: '0.9em', 
-        color: '#fff',
-        background: '#4c7daf', 
-        padding: '8px 16px', 
-        position: 'fixed', 
-        bottom: '20px', 
-        right: '20px',
-        borderRadius: '4px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
-      }}>Saving progress...</div>}
-    </div>
+      <h2 style={{ padding:'2px', margin:'0px', textAlign:'center'}}>{puzzle.title || 'Pre-made Puzzle'}</h2>
+      <div style={{ display: 'flex', width: '100%', margin: '0 auto', padding: '2px' }}>      
+        <ThemeProvider theme={crosswordTheme}>
+          <Crossword
+              ref={crosswordRef}
+              data={crosswordData}
+              onCellChange={handleCellChange}            
+              onCrosswordComplete={() => {}}
+              onReady={handleCrosswordReady}        
+              onClueSelected={handleClueSelected}
+              // Convert our gridState array to the format expected by react-crossword
+              gridData={gridState.reduce((acc, cell) => {
+                acc[`${cell.row}_${cell.col}`] = cell.letter;
+                return acc;
+              }, {})}
+              // Setting useStorage to false ensures we fully control the grid state
+              // and prevents conflicts with localStorage
+              useStorage={false}
+              // Disable this key to prevent auto-saving to localStorage
+              // We'll manage our own state with Firestore
+              storageKey={null}
+          />
+        </ThemeProvider>      
+        {saving && <div style={{
+          fontSize: '0.9em', 
+          color: '#fff',
+          background: '#4c7daf', 
+          padding: '8px 16px', 
+          position: 'fixed', 
+          bottom: '20px', 
+          right: '20px',
+          borderRadius: '4px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+        }}>Saving progress...</div>}
+      </div>
+      <div style={{ width: '300px', padding: '0 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        {/* Across clues */}
+        <div>
+          <h3>Across</h3>
+          <div 
+            ref={acrossCluesRef} 
+            style={{ maxHeight: '40vh', overflowY: 'auto', marginBottom: '20px' }}
+          >
+            {crosswordData && crosswordData.across && 
+              Object.entries(crosswordData.across).map(([number, clue]) => {
+                // Make sure clue is a string, not an object
+                const clueText = typeof clue === 'object' ? (clue.clue || '') : clue;
+                
+                return (
+                  <div 
+                    key={`across-${number}`}
+                    data-clue={`across-${number}`} 
+                    style={{ marginBottom: '8px' }}
+                  >
+                    <strong>{number}.</strong> {clueText}
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+        
+        {/* Down clues */}
+        <div>
+          <h3>Down</h3>
+          <div 
+            ref={downCluesRef} 
+            style={{ maxHeight: '40vh', overflowY: 'auto' }}
+          >
+            {crosswordData && crosswordData.down && 
+              Object.entries(crosswordData.down).map(([number, clue]) => {
+                // Make sure clue is a string, not an object
+                const clueText = typeof clue === 'object' ? (clue.clue || '') : clue;
+                
+                return (
+                  <div 
+                    key={`down-${number}`}
+                    data-clue={`down-${number}`} 
+                    style={{ marginBottom: '8px' }}
+                  >
+                    <strong>{number}.</strong> {clueText}
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

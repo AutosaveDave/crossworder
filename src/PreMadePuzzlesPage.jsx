@@ -424,21 +424,6 @@ export default function PreMadePuzzlesPage() {
                 )}
               </>
             )}
-            {/* Loading indicator */}
-            {loadingFullPuzzles && (
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: 'rgba(255,255,255,0.8)',
-                padding: '10px 20px',
-                borderRadius: '5px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}>
-                Loading...
-              </div>
-            )}
           </div>
           
           
@@ -446,7 +431,7 @@ export default function PreMadePuzzlesPage() {
         {/* Pagination controls - always visible */}
           <div style={{
             display: 'flex', 
-            justifyContent: 'space-between',
+            justifyContent: 'space-around',
             alignItems: 'center',
             marginTop: 6,
             paddingTop: 6,
@@ -478,7 +463,22 @@ export default function PreMadePuzzlesPage() {
               Next
             </button>
           </div>
-        <button style={{marginTop: 32}} onClick={() => navigate('/crossworder/')}>Back to Dashboard</button>
+        <button style={{marginTop: 8}} onClick={() => navigate('/crossworder/')}>Back to Dashboard</button>
+        {/* Loading indicator */}
+            {loadingFullPuzzles && (
+              <div style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: 'rgba(255,255,255,0.8)',
+                padding: '10px 20px',
+                borderRadius: '5px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>
+                Loading...
+              </div>
+            )}
       </div>
     </div>
   );
