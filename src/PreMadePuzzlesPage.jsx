@@ -138,10 +138,8 @@ export default function PreMadePuzzlesPage() {
   const allDecades = Array.from(new Set(fullPuzzles.map(getPuzzleDecade).filter(Boolean))).sort((a,b) => b-a);
 
   return (
-    <div className="dashboard-container fade-in" style={{flexDirection: 'column', alignItems: 'stretch', minHeight: '80vh'}}>
-      <div className="dashboard-section" style={{marginBottom: 0, maxWidth: 1100, margin: '0 auto', width: '100%'}}>
-        <h2 style={{fontSize: '2.2em', marginBottom: 0}}>Pre-made Crossword Puzzles</h2>
-        <hr />
+    <div className="dashboard-container fade-in" style={{flexDirection: 'column', alignItems: 'stretch', maxHeight: '100%'}}>
+      <div className="dashboard-section" style={{marginBottom: 0, maxWidth: 1100, margin: '0 auto', width: '90%'}}>
         {/* Filter/search controls */}
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end',
@@ -193,9 +191,17 @@ export default function PreMadePuzzlesPage() {
               </select>
             </label>
           </div>
-        </div>
-        {/* Puzzle list */}
-        <div style={{overflowX: 'auto'}}>
+        </div>        {/* Puzzle list */}
+        <div style={{
+          maxHeight: '400px',
+          overflowX: 'auto', 
+          overflowY: 'auto',
+          borderRadius: '8px',
+          border: '1px solid var(--border)',
+          padding: '10px',
+          marginBottom: '20px',
+          boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.05)'
+        }}>
           {loadingFullPuzzles ? (
             <div>Loading full puzzles...</div>
           ) : (

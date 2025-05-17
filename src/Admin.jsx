@@ -166,7 +166,7 @@ export default function Admin() {
 
   // Show admin UI if user is admin
   return (
-    <div>
+    <div style={{ maxHeight: '100vh', overflowY:'scroll'}}>
       <h2>Admin: Manage Word Sets</h2>
       <div>
         <input

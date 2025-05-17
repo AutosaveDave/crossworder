@@ -60,14 +60,14 @@ function DashboardMain() {
 
   return (
     <div className="dashboard-container fade-in">
-      <div className="dashboard-section" style={{marginBottom: 0}}>
-        <h2 style={{fontSize: '2.2em', marginBottom: 0}}>
-          Welcome, {user?.email}
+      <div className="dashboard-section" style={{marginBottom: 0, height: '90vh'}}>
+        <h2 style={{fontSize: '2.2em', marginTop: '10px', marginBottom:'10px', textAlign:'center'}}>
+          Welcome, {user?.username}!
         </h2>
         {/* Pre-made puzzle progress list */}
         {userPremadeProgress.length > 0 && (
-          <div style={{margin: '1.5em 0'}}>
-            <h3>Your Pre-made Puzzle Progress</h3>
+          <div style={{margin: 0, maxHeight:'60vh',overflowY:'scroll'}}>
+            <h3 style={{textAlign:'center', margin:0 }}>Puzzles in Progress</h3>
             <ul style={{listStyle: 'none', padding: 0}}>
               {userPremadeProgress.map(p => (
                 <li key={p.fullPuzzleId} style={{marginBottom: 10, display: 'flex', alignItems: 'center'}}>
@@ -83,16 +83,16 @@ function DashboardMain() {
             </ul>
           </div>
         )}
-        <div>
+        <div style={{ alignContent: 'center', textAlign: 'center', marginTop: '24px' }}>
           <button onClick={() => navigate('/crossworder/premade')}>Load Pre-made Crossword Puzzle</button>
-        </div>
-        <div style={{margin: '1.5em 0'}}>
-          <button onClick={handleLogout}>Log out</button>
-          {user?.admin && (
-            <button style={{marginLeft: 16}} onClick={() => navigate('/crossworder/admin')}>
-              Admin
-            </button>
-          )}
+          <div style={{margin: '1.5em 0'}}>
+            <button onClick={handleLogout}>Log out</button>
+            {user?.admin && (
+              <button style={{marginLeft: 16}} onClick={() => navigate('/crossworder/admin')}>
+                Admin
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
